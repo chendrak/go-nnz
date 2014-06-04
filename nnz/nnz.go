@@ -112,6 +112,58 @@ func (i *Int64) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Float64 is a wrapper around float64 where Go float64(0) serializes to SQL/JSON
+// null, and SQL/JSON null deserializes to Go float64(0).
+type Float64 float64
+
+// Scan implements the database/sql/driver.Scanner interface.
+func (f *Float64) Scan(v interface{}) error {
+	if v == nil {
+		*f = 0
+		return nil
+	}
+	switch v := v.(type) {
+	case float64:
+		*f = Float64(v)
+	default:
+		return fmt.Errorf("nnz: scanning %T, got %T", f, v)
+	}
+	return nil
+}
+
+// Value implements the database/sql/driver.Valuer interface.
+func (f Float64) Value() (driver.Value, error) {
+	if f == 0 {
+		return nil, nil
+	}
+	return float64(f), nil
+}
+
+// MarshalJSON implements the encoding/json.Marshaler interface.
+func (f Float64) MarshalJSON() ([]byte, error) {
+	if f == 0 {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(float64(f))
+}
+
+// UnmarshalJSON implements the encoding/json.Unmarshaler interface.
+func (f *Float64) UnmarshalJSON(data []byte) error {
+	var v interface{}
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+	if v == nil {
+		*f = 0
+	} else if v, ok := v.(float64); ok {
+		*f = Float64(v)
+	} else {
+		return fmt.Errorf("nnz: unmarshaling %T, got %T", f, v)
+	}
+	return nil
+}
+
 // String is a wrapper around string where Go "" serializes to SQL/JSON null,
 // and SQL/JSON null deserializes to Go "".
 type String string
