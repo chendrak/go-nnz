@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // Int is a wrapper around int where Go int(0) serializes to SQL/JSON null, and
@@ -214,6 +215,64 @@ func (s *String) UnmarshalJSON(data []byte) error {
 		*s = String(v)
 	} else {
 		return fmt.Errorf("nnz: unmarshaling %T, got %T", s, v)
+	}
+	return nil
+}
+
+//  Time is a wrapper around time.Time where Go time.Time(0) serializes to SQL/JSON
+// null, and SQL/JSON null deserializes to Go time.Time(0).
+type Time time.Time
+
+var zt time.Time // the zero time.
+
+// Scan implements the database/sql/driver.Scanner interface.
+func (t *Time) Scan(v interface{}) error {
+	if v == nil {
+		*t = Time(zt) // TODO: there is probably a better way to do this.
+		return nil
+	}
+	switch v := v.(type) {
+	case time.Time:
+		*t = Time(v)
+	default:
+		return fmt.Errorf("nnz: scanning %T, got %T", t, v)
+	}
+	return nil
+}
+
+// Value implements the database/sql/driver.Valuer interface.
+func (t Time) Value() (driver.Value, error) {
+	tm := time.Time(t)
+
+	if tm.IsZero() {
+		return nil, nil
+	}
+	return time.Time(t), nil
+}
+
+// MarshalJSON implements the encoding/json.Marshaler interface.
+func (t Time) MarshalJSON() ([]byte, error) {
+	tm := time.Time(t)
+
+	if tm.IsZero() {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(time.Time(t))
+}
+
+// UnmarshalJSON implements the encoding/json.Unmarshaler interface.
+func (t *Time) UnmarshalJSON(data []byte) error {
+	var v interface{}
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+	if v == nil {
+		*t = Time(zt)
+	} else if v, ok := v.(time.Time); ok {
+		*t = Time(v)
+	} else {
+		return fmt.Errorf("nnz: unmarshaling %T, got %T", t, v)
 	}
 	return nil
 }
