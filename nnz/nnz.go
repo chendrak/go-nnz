@@ -228,7 +228,7 @@ var zt time.Time // the zero time.
 // Scan implements the database/sql/driver.Scanner interface.
 func (t *Time) Scan(v interface{}) error {
 	if v == nil {
-		*t = Time(zt) // TODO: there is probably a better way to do this.
+		*t = Time(zt)
 		return nil
 	}
 	switch v := v.(type) {
@@ -247,7 +247,8 @@ func (t Time) Value() (driver.Value, error) {
 	if tm.IsZero() {
 		return nil, nil
 	}
-	return time.Time(t), nil
+
+	return tm, nil
 }
 
 // MarshalJSON implements the encoding/json.Marshaler interface.
@@ -274,5 +275,23 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	} else {
 		return fmt.Errorf("nnz: unmarshaling %T, got %T", t, v)
 	}
+	return nil
+}
+
+// UnmarshalText implements the encoding/TextUnmarshaler interface.
+func (t *Time) UnmarshalText(data []byte) error {
+	if string(data) == "" {
+		*t = Time(zt)
+		return nil
+	}
+
+	nt, err := time.Parse(time.RFC3339, string(data))
+
+	if err != nil {
+		return err
+	}
+
+	*t = Time(nt)
+
 	return nil
 }
