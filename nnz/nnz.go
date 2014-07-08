@@ -295,3 +295,14 @@ func (t *Time) UnmarshalText(data []byte) error {
 
 	return nil
 }
+
+// GobEncode implements the gob.GobEncoder interface.
+func (t Time) GobEncode() ([]byte, error) {
+	return time.Time(t).GobEncode()
+}
+
+// GobDecode implements the gob.GobDecoder interface.
+func (t *Time) GobDecode(data []byte) error {
+	tm := time.Time(*t)
+	return tm.GobDecode(data)
+}
