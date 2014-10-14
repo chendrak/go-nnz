@@ -303,6 +303,13 @@ func (t Time) GobEncode() ([]byte, error) {
 
 // GobDecode implements the gob.GobDecoder interface.
 func (t *Time) GobDecode(data []byte) error {
-	tm := time.Time(*t)
-	return tm.GobDecode(data)
+	var tm time.Time
+
+	if err := tm.UnmarshalBinary(data); err != nil {
+		return err
+	}
+
+	*t = Time(tm)
+
+	return nil
 }
